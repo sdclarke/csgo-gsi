@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 )
 
 func handle(w http.ResponseWriter, r *http.Request) {
@@ -16,17 +17,17 @@ func handle(w http.ResponseWriter, r *http.Request) {
 		d := json.NewDecoder(r.Body)
 		var i map[string]interface{}
 		d.Decode(&i)
-		for _, v := range i {
+		for k, v := range i {
 			switch vv := v.(type) {
 			case string:
-				fmt.Fprintf(w, "Hello, %s\n", vv)
+				fmt.Fprintf(w, "%s, %s\n", k, vv)
 			case float64:
-				fmt.Fprintf(w, "Age: %.0f\n", vv)
+				fmt.Fprintf(w, "%s: %.0f\n", k, vv)
 			}
 		}
 		fmt.Fprintf(w, "Hello %q\n", html.EscapeString(r.URL.Path))
 	case http.MethodGet:
-		var dir http.Dir = "/home/scottclarke"
+		dir := http.Dir(os.Getenv("HOME"))
 		path := html.EscapeString(r.URL.Path)
 		f, err := dir.Open(path)
 		if err != nil {
@@ -37,6 +38,32 @@ func handle(w http.ResponseWriter, r *http.Request) {
 		stat, err := f.Stat()
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if stat.IsDir() {
+			files, err := f.Readdir(0)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			fmt.Fprintf(w, "<table>")
+			fmt.Fprintf(w, "<tr><td><a href=\"..\">..</a></td></tr>")
+			for _, dirFile := range files {
+				fmt.Fprintf(w, "<tr>")
+				fmt.Fprintf(w, "<td>%6d</td>", dirFile.Size())
+				name := dirFile.Name()
+				if dirFile.IsDir() {
+					name = fmt.Sprintf("%s/", name)
+				}
+				if path == "/" {
+					fmt.Fprintf(w, "<td><a href=\"%s\">%-30s</a></td>", name, name)
+				} else {
+					fmt.Fprintf(w, "<td><a href=\"%s%s\">%-30s</a></td>", path, name, name)
+				}
+				fmt.Fprintf(w, "<td>%s</td>", dirFile.ModTime().String())
+				fmt.Fprintf(w, "</tr>")
+			}
+			fmt.Fprintf(w, "</table>")
 			return
 		}
 		size := stat.Size()
@@ -62,7 +89,7 @@ func handle(w http.ResponseWriter, r *http.Request) {
 	//}
 	//fmt.Fprintf(w, "Deleted file: %s\n", path)
 	default:
-		fmt.Fprintf(w, "What the actual fuck\n")
+		fmt.Fprintf(w, "No\n")
 	}
 }
 
