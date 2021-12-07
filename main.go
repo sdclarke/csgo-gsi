@@ -11,6 +11,8 @@ import (
 	"os"
 	"sort"
 	"strings"
+
+	"github.com/sdclarke/csgo-gsi/pkg/structs"
 )
 
 func handle(w http.ResponseWriter, r *http.Request) {
@@ -18,12 +20,36 @@ func handle(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPost:
 		defer r.Body.Close()
 		d := json.NewDecoder(r.Body)
-		var i map[string]interface{}
+		var i structs.State
 		d.Decode(&i)
-		for k, v := range i {
-			log.Printf("%s: %#v", k, v)
+		//for k, v := range i {
+		//log.Printf("%s: %#v", k, v)
+		//}
+		if i.Provider != nil {
+			log.Printf("Provider: %#v", *i.Provider)
 		}
-		fmt.Fprintf(w, "Hello %q\n", html.EscapeString(r.URL.Path))
+		if i.Map != nil {
+			log.Printf("Map: %#v", *i.Map)
+		}
+		if i.Round != nil {
+			log.Printf("Round: %#v", *i.Round)
+		}
+		if i.Player != nil {
+			log.Printf("Player: %#v", *i.Player)
+		}
+		if i.Previously != nil {
+			log.Printf("Previously: %#v", *i.Previously)
+		}
+		if i.Added != nil {
+			log.Printf("Added: %#v", *i.Added)
+		}
+		if i.AllPlayers != nil {
+			log.Printf("All Players: %#v", i.AllPlayers)
+		}
+		if i.Auth != nil {
+			log.Printf("Auth: %#v", *i.Auth)
+		}
+		w.WriteHeader(http.StatusOK)
 	case http.MethodGet:
 		dir := http.Dir(os.Getenv("HOME"))
 		path := html.EscapeString(r.URL.Path)
